@@ -1,0 +1,67 @@
+from keras import layers
+from keras import models
+from keras import optimizers
+from keras.preprocessing.image import ImageDataGenerator
+import numpy as np
+from keras import utils
+from PIL import Image
+
+train_dir = "../demo_images_patches/train" # Location of the training skin patch images.
+
+test_dir = "/content/gdrive/My Drive/code/data/demo_images_patches/test" # Location of the testing skin patch images.
+
+img_width, img_height = 150, 150 # Image size
+
+input_shape = (img_width, img_height, 3)
+
+epochs = 30
+
+batch_size = 10
+
+classes = ['0-Not Acne', '1-Clear', '2-Mild', '3-Moderate', '4-Severe']
+
+model = models.Sequential()
+model.add(layers.Conv2D(32, (3, 3), activation='relu',
+ input_shape=(150, 150, 3)))
+model.add(layers.MaxPooling2D((2, 2)))
+model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+model.add(layers.MaxPooling2D((2, 2)))
+model.add(layers.Conv2D(128, (3, 3), activation='relu'))
+model.add(layers.MaxPooling2D((2, 2)))
+model.add(layers.Conv2D(128, (3, 3), activation='relu'))
+model.add(layers.MaxPooling2D((2, 2)))
+model.add(layers.Flatten())
+model.add(layers.Dense(512, activation='relu'))
+model.add(layers.Dense(5, activation='softmax'))
+
+model.summary()
+
+model.compile(loss='categorical_crossentropy',
+              optimizer=optimizers.RMSprop(lr=1e-4),
+              metrics=['accuracy'])
+
+datagen = ImageDataGenerator(rescale=1. / 255)
+
+train_generator = datagen.flow_from_directory(
+    train_dir,
+    target_size=(150, 150),
+    batch_size=batch_size,
+    class_mode='categorical',
+    classes=classes)
+
+test_generator = datagen.flow_from_directory(
+    test_dir,
+    target_size=(img_width, img_height),
+    batch_size=batch_size,
+    class_mode='categorical',
+    classes=classes)
+
+history = model.fit_generator(
+    train_generator,
+    steps_per_epoch=53,
+    epochs=30)
+
+scores = model.evaluate_generator(test_generator, 53 // batch_size)
+print("Accuracy on training set: %.2f%%" % (scores[1]*100))
+
+model.save('../acne_severity_model.h5') # Saving the model
